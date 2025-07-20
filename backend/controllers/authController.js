@@ -13,12 +13,11 @@ export const firebaseEmailLogin = async (req, res) => {
     const decoded = await admin.auth().verifyIdToken(idToken);
     const { uid, email, name, picture } = decoded;
 
-  
-
     res.cookie('token', idToken, {
       httpOnly: true,
-      secure: false, 
-      sameSite: 'Strict',
+      secure: false, // set to true only in production with HTTPS
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 1 week
     });
 
     return res.status(200).json({ uid, email, name: name || null });
@@ -30,6 +29,6 @@ export const firebaseEmailLogin = async (req, res) => {
 
 // Logout (clear cookie)
 export const logout = (req, res) => {
-  res.clearCookie('session');
+  res.clearCookie('token');
   res.json({ message: 'Logged out' });
 };
