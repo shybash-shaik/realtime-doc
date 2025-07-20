@@ -1,4 +1,3 @@
-// --- client/src/components/PrivateRoute.jsx ---
 import { useAuth } from './AuthContext';
 import { Navigate, useLocation } from 'react-router-dom';
 
@@ -10,7 +9,6 @@ const PrivateRoute = ({ children }) => {
     return <div>Loading...</div>;
   }
   if (!user) {
-    // Redirect to login, but remember where we were
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
   return children;
