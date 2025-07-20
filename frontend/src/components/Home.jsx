@@ -16,12 +16,14 @@ const Home = () => {
       </p>
 
       {currentUser ? (
-        <button
-          onClick={() => navigate("/dashboard")}
-          className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl shadow-md transition duration-200"
-        >
-          Go to Dashboard
-        </button>
+        <div className="flex space-x-4">
+          <button
+            onClick={() => navigate("/documents")}
+            className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl shadow-md transition duration-200"
+          >
+            Go to Documents
+          </button>
+        </div>
       ) : (
         <div className="flex space-x-4">
           <button
