@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Plus, FileText, Calendar, User, Trash2, Edit } from 'lucide-react';
 import api from '../api/docs'; // Use pre-configured axios instance
 
@@ -7,21 +7,32 @@ const DocumentList = ({ onDocumentSelect, onCreateDocument }) => {
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newDocumentTitle, setNewDocumentTitle] = useState('');
+  const [search, setSearch] = useState('');
+  const [searchTimeout, setSearchTimeout] = useState(null);
 
   useEffect(() => {
     fetchDocuments();
   }, []);
 
-  const fetchDocuments = async () => {
+  const fetchDocuments = async (query = '') => {
     try {
       setLoading(true);
-      const response = await api.get('/docs');
+      const response = await api.get('/docs', { params: query ? { q: query } : {} });
       setDocuments(response.data);
     } catch (error) {
       console.error('Error fetching documents:', error);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSearchChange = (e) => {
+    const value = e.target.value;
+    setSearch(value);
+    if (searchTimeout) clearTimeout(searchTimeout);
+    setSearchTimeout(setTimeout(() => {
+      fetchDocuments(value);
+    }, 400));
   };
 
   const createDocument = async () => {
@@ -91,7 +102,16 @@ const DocumentList = ({ onDocumentSelect, onCreateDocument }) => {
             <span>New Document</span>
           </button>
         </div>
-
+        {/* Search Bar */}
+        <div className="mb-6">
+          <input
+            type="text"
+            placeholder="Search documents..."
+            value={search}
+            onChange={handleSearchChange}
+            className="w-full md:w-1/2 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+        </div>
         {/* Documents Grid */}
         {documents.length === 0 ? (
           <div className="text-center py-12">

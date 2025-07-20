@@ -7,6 +7,8 @@ import dotenv from 'dotenv';
 import admin from './firebase/admin.js'; // initializes firebase-admin
 import { getFirestore } from 'firebase-admin/firestore';
 import { Server as SocketIOServer } from 'socket.io';
+import { encodeStateAsUpdate, applyUpdate, Doc } from 'yjs';
+import { Buffer } from 'buffer';
 
 
 import authRoutes from './routes/auth.routes.js';
@@ -32,20 +34,51 @@ const io = new SocketIOServer(server, {
 const db = getFirestore();
 const docs = new Map(); // roomName → { doc, awareness }
 
-// Yjs document management
-const getYDoc = (roomName) => {
+// Helper: Save Yjs doc state to Firestore
+async function saveYDocToFirestore(roomName) {
+  const room = docs.get(roomName);
+  if (!room || !room.doc) return;
+  const update = encodeStateAsUpdate(room.doc);
+  const docId = roomName.replace(/^document-/, '');
+  await db.collection('documents').doc(docId).set({
+    content: Buffer.from(update).toString('base64'),
+    updatedAt: new Date()
+  }, { merge: true });
+}
+
+// Helper: Load Yjs doc state from Firestore
+async function loadYDocFromFirestore(roomName) {
+  const docId = roomName.replace(/^document-/, '');
+  const docSnap = await db.collection('documents').doc(docId).get();
+  if (!docSnap.exists) return null;
+  const data = docSnap.data();
+  if (typeof data.content === 'string' && data.content.length > 0) {
+    try {
+      const ydoc = new Doc();
+      const update = Buffer.from(data.content, 'base64');
+      applyUpdate(ydoc, update);
+      return ydoc;
+    } catch (e) {
+      console.error('Failed to decode Yjs update from Firestore:', e);
+      // Optionally: clear the invalid content in Firestore here
+      return new Doc();
+    }
+  }
+  return null;
+}
+
+// Yjs document management (now async)
+const getYDoc = async (roomName) => {
   if (!docs.has(roomName)) {
-    const doc = new Y.Doc();
+    let doc = await loadYDocFromFirestore(roomName);
+    if (!doc) doc = new Y.Doc();
     const awareness = new Awareness(doc);
-    
-    // Set up awareness for cursor positions and user info
     awareness.setLocalStateField('user', {
       name: 'Anonymous',
       color: '#' + Math.floor(Math.random() * 16777215).toString(16),
       id: Math.random().toString(36).substr(2, 9)
     });
-    
-    docs.set(roomName, { doc, awareness });
+    docs.set(roomName, { doc, awareness, users: new Set() });
   }
   return docs.get(roomName);
 };
@@ -69,11 +102,13 @@ app.use('/api/docs', docsRoutes);
 // 🔌 Socket.IO connection for Yjs collaboration
 io.on('connection', (socket) => {
   console.log('Client connected:', socket.id);
-  
-  socket.on('join-document', (roomName, userInfo) => {
+
+  socket.on('join-document', async (roomName, userInfo) => {
     socket.join(roomName);
-    const { doc, awareness } = getYDoc(roomName);
-    
+    const room = await getYDoc(roomName);
+    room.users.add(socket.id);
+    const { doc, awareness } = room;
+
     // Update user info in awareness
     if (userInfo) {
       awareness.setLocalStateField('user', {
@@ -82,40 +117,56 @@ io.on('connection', (socket) => {
         id: userInfo.id || Math.random().toString(36).substr(2, 9)
       });
     }
-    
+
     console.log(`User joined document: ${roomName}`);
-    
+
     // Send current document state to the new user
+    const update = Y.encodeStateAsUpdate(doc);
     socket.emit('document-state', {
-      content: '', // For now, start with empty content
+      content: Buffer.from(update).toString('base64'),
       users: Array.from(awareness.getStates().values())
     });
   });
-  
-  // Handle Yjs document updates
-  socket.on('yjs-update', (roomName, update) => {
-    const { doc } = getYDoc(roomName);
-    Y.applyUpdate(doc, new Uint8Array(update));
-    
-    // Broadcast to other clients in the same room
+
+  socket.on('yjs-update', async (roomName, update) => {
+    const room = await getYDoc(roomName);
+    Y.applyUpdate(room.doc, new Uint8Array(update));
     socket.to(roomName).emit('yjs-update', update);
   });
-  
 
-  
-  socket.on('leave-document', (roomName) => {
+  socket.on('leave-document', async (roomName) => {
     socket.leave(roomName);
+    const room = docs.get(roomName);
+    if (room) {
+      room.users.delete(socket.id);
+      if (room.users.size === 0) {
+        await saveYDocToFirestore(roomName);
+        docs.delete(roomName);
+      }
+    }
     console.log(`User left document: ${roomName}`);
   });
-  
-  socket.on('disconnect', () => {
+
+  socket.on('awareness-update', (roomName, states) => {
+    // Broadcast to all other clients in the room
+    socket.to(roomName).emit('awareness-update', { states });
+  });
+
+  socket.on('disconnect', async () => {
+    for (const [roomName, room] of docs.entries()) {
+      room.users.delete(socket.id);
+      if (room.users.size === 0) {
+        await saveYDocToFirestore(roomName);
+        docs.delete(roomName);
+      }
+    }
     console.log('Client disconnected:', socket.id);
   });
 });
 
 
 
-// 🧪 Start server
+// �� Start server
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
   console.log(`🚀 Server running at http://localhost:${PORT}`);

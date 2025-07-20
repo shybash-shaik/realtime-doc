@@ -9,17 +9,24 @@ const db = getFirestore();
 // Apply authentication middleware to all routes
 router.use(verifyJWT);
 
-// Get all documents
+// Get all documents (with optional search)
 router.get('/', async (req, res) => {
   try {
+    const q = req.query.q ? req.query.q.toLowerCase() : null;
     const docsSnapshot = await db.collection('documents').get();
-    const documents = [];
+    let documents = [];
     docsSnapshot.forEach(doc => {
       documents.push({
         id: doc.id,
         ...doc.data()
       });
     });
+    if (q) {
+      documents = documents.filter(doc =>
+        (doc.title && doc.title.toLowerCase().includes(q)) ||
+        (doc.content && doc.content.toLowerCase().includes(q))
+      );
+    }
     res.json(documents);
   } catch (error) {
     res.status(500).json({ error: error.message });
