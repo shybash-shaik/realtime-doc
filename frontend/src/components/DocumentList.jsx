@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, FileText, Calendar, User, Trash2, Edit } from 'lucide-react';
-import axios from 'axios';
+import api from '../api/docs'; // Use pre-configured axios instance
 
 const DocumentList = ({ onDocumentSelect, onCreateDocument }) => {
   const [documents, setDocuments] = useState([]);
@@ -15,7 +15,7 @@ const DocumentList = ({ onDocumentSelect, onCreateDocument }) => {
   const fetchDocuments = async () => {
     try {
       setLoading(true);
-      const response = await axios.get('http://localhost:5000/api/docs');
+      const response = await api.get('/docs');
       setDocuments(response.data);
     } catch (error) {
       console.error('Error fetching documents:', error);
@@ -28,9 +28,8 @@ const DocumentList = ({ onDocumentSelect, onCreateDocument }) => {
     if (!newDocumentTitle.trim()) return;
 
     try {
-      const response = await axios.post('http://localhost:5000/api/docs', {
+      const response = await api.post('/docs', {
         title: newDocumentTitle,
-        userId: 'user123', // This should come from auth context
         content: ''
       });
 
@@ -50,7 +49,7 @@ const DocumentList = ({ onDocumentSelect, onCreateDocument }) => {
     if (!window.confirm('Are you sure you want to delete this document?')) return;
 
     try {
-      await axios.delete(`http://localhost:5000/api/docs/${documentId}`);
+      await api.delete(`/docs/${documentId}`);
       setDocuments(prev => prev.filter(doc => doc.id !== documentId));
     } catch (error) {
       console.error('Error deleting document:', error);
