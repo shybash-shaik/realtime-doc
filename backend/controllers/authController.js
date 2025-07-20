@@ -1,6 +1,5 @@
 import admin from '../firebase/admin.js';
 
-// Login or Register using Firebase ID token (email/password-based)
 export const firebaseEmailLogin = async (req, res) => {
   try {
     const { idToken } = req.body;
@@ -9,15 +8,14 @@ export const firebaseEmailLogin = async (req, res) => {
       return res.status(400).json({ error: 'Missing Firebase ID token' });
     }
 
-    // Verify ID token from Firebase
     const decoded = await admin.auth().verifyIdToken(idToken);
     const { uid, email, name, picture } = decoded;
 
     res.cookie('token', idToken, {
       httpOnly: true,
-      secure: false, // set to true only in production with HTTPS
+      secure: false,
       sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 1 week
+      maxAge: 7 * 24 * 60 * 60 * 1000, 
     });
 
     return res.status(200).json({ uid, email, name: name || null });
@@ -27,7 +25,6 @@ export const firebaseEmailLogin = async (req, res) => {
   }
 };
 
-// Logout (clear cookie)
 export const logout = (req, res) => {
   res.clearCookie('token');
   res.json({ message: 'Logged out' });

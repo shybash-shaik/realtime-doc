@@ -1,10 +1,9 @@
-// backend/middlewares/documentRole.js
 import { getFirestore } from 'firebase-admin/firestore';
 import { hasDocumentRole } from '../utils/permissions.js';
 
 export function requireDocumentRole(allowedRoles) {
   return async (req, res, next) => {
-    const userId = req.user?.uid; // Set by your auth middleware
+    const userId = req.user?.uid; 
     const docId = req.params.id || req.body.documentId;
     if (!userId || !docId) return res.status(400).json({ error: 'Missing user or document ID' });
 
@@ -16,7 +15,7 @@ export function requireDocumentRole(allowedRoles) {
     if (!hasDocumentRole(doc, userId, allowedRoles)) {
       return res.status(403).json({ error: 'Forbidden: insufficient permissions' });
     }
-    req.document = doc; // Optionally attach doc to request
+    req.document = doc; 
     next();
   };
 } 

@@ -8,10 +8,9 @@ const router = express.Router();
 router.post('/login', firebaseEmailLogin);
 router.post('/logout', logout);
 router.get('/protected', verifyJWT, (req, res) => {
-  res.json(req.user); // Return only the user object
+  res.json(req.user); 
 });
 
-// Add this route:
 router.post('/lookup-uid', verifyJWT, async (req, res) => {
   const { email } = req.body;
   if (!email) return res.status(400).json({ error: 'Email is required' });
@@ -23,7 +22,6 @@ router.post('/lookup-uid', verifyJWT, async (req, res) => {
   }
 });
 
-// Add this route:
 router.post('/user-info', verifyJWT, async (req, res) => {
   const { uids } = req.body;
   if (!Array.isArray(uids) || uids.length === 0) {

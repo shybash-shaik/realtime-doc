@@ -32,11 +32,9 @@ function AppRoutes() {
 
   return (
     <Routes>
-      {/* Public routes */}
       <Route path="/" element={<Home />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
-      {/* Protected routes */}
       <Route
         path="/documents"
         element={
