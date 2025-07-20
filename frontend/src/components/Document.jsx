@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import './Document.css';
 import api from '../api/docs'; // Use your pre-configured axios instance
+import { Awareness } from 'y-protocols/awareness';
 
 // Custom Socket.IO provider for Yjs
 class SocketIOProvider {
@@ -34,24 +35,44 @@ class SocketIOProvider {
     this.socket = socket;
     this.roomName = roomName;
     this.doc = doc;
+    this.awareness = doc.awareness;
     this.connected = false;
-    
+
+    // Listen for Yjs document updates
     this.socket.on('yjs-update', (update) => {
       Y.applyUpdate(this.doc, new Uint8Array(update));
     });
-    
+
+    // Listen for awareness updates from the server
+    this.socket.on('awareness-update', ({ states }) => {
+      // states is an array of [clientID, state] pairs
+      if (Array.isArray(states)) {
+        this.awareness.setStates(new Map(states));
+      }
+    });
+
+    // Broadcast local awareness changes to the server
+    this.awareness.on('update', () => {
+      const states = Array.from(this.awareness.getStates().entries());
+      this.socket.emit('awareness-update', this.roomName, states);
+    });
+
+    // Broadcast Yjs document updates
     this.doc.on('afterTransaction', (transaction) => {
       if (transaction.origin !== this) {
         const update = Y.encodeStateAsUpdate(this.doc);
         this.socket.emit('yjs-update', this.roomName, Array.from(update));
       }
     });
-    
+
     this.connected = true;
   }
-  
+
   destroy() {
     this.connected = false;
+    this.socket.off('yjs-update');
+    this.socket.off('awareness-update');
+    this.awareness.off('update');
   }
 }
 
@@ -78,6 +99,7 @@ const Document = ({ onSave }) => {
   const [lookupLoading, setLookupLoading] = useState(false);
   const [userInfoMap, setUserInfoMap] = useState({});
   const [saveStatus, setSaveStatus] = useState('saved'); // 'saving' | 'saved'
+  const [onlineUsers, setOnlineUsers] = useState([]);
 
   // Use passed doc or fallback to paramId
   const documentId = doc?.id || paramId;
@@ -175,6 +197,12 @@ const Document = ({ onSave }) => {
     if (!documentId) return;
 
     const ydoc = new Y.Doc();
+    ydoc.awareness = new Awareness(ydoc);
+    ydoc.awareness.setLocalStateField('user', {
+      name: user?.displayName || user?.email || 'Anonymous',
+      color: '#' + Math.floor(Math.random() * 16777215).toString(16),
+      id: userId || Math.random().toString(36).substr(2, 9)
+    });
     ydocRef.current = ydoc;
 
     // Create Socket.IO connection for Yjs
@@ -194,10 +222,44 @@ const Document = ({ onSave }) => {
         id: userId || Math.random().toString(36).substr(2, 9)
       });
       
-
-      
       setIsYjsReady(true);
     });
+
+    // Apply initial Yjs state from Firestore if present
+    socket.on('document-state', (data) => {
+      if (data.content) {
+        // Decode base64 to Uint8Array
+        const binary = atob(data.content);
+        const update = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) {
+          update[i] = binary.charCodeAt(i);
+        }
+        Y.applyUpdate(ydoc, update);
+      }
+      // Optionally handle users: data.users
+    });
+
+    // Awareness tracking for online users
+    let awareness = null;
+    if (providerRef.current) {
+      awareness = providerRef.current.doc.awareness || null;
+    }
+    // Fallback: try to get awareness from ydoc
+    if (!awareness && ydocRef.current) {
+      awareness = ydocRef.current.awareness || null;
+    }
+    if (awareness) {
+      const updateOnlineUsers = () => {
+        const states = Array.from(awareness.getStates().values());
+        setOnlineUsers(states.map(s => s.user).filter(Boolean));
+      };
+      awareness.on('change', updateOnlineUsers);
+      updateOnlineUsers();
+      // Cleanup
+      return () => {
+        awareness.off('change', updateOnlineUsers);
+      };
+    }
 
     socket.on('error', (err) => {
       console.error('Yjs Socket.IO error:', err);
@@ -394,12 +456,25 @@ const Document = ({ onSave }) => {
             </div>
           </div>
           <div className="flex items-center space-x-4">
-            {/* Connected Users */}
+            {/* Connected Users (detailed) */}
             <div className="flex items-center space-x-2">
               <Users className="w-4 h-4 text-gray-500" />
-              <span className="text-sm text-gray-600">
-                {connectedUsers.length} user{connectedUsers.length !== 1 ? 's' : ''} online
-              </span>
+              {onlineUsers.length === 0 ? (
+                <span className="text-sm text-gray-600">No users online</span>
+              ) : (
+                <div className="flex -space-x-2">
+                  {onlineUsers.map((u, idx) => (
+                    <div key={u.id || idx} className="flex items-center space-x-1 mr-2">
+                      <span
+                        className="inline-block w-2 h-2 rounded-full mr-1"
+                        style={{ backgroundColor: u.color || '#888' }}
+                        title={u.name || u.id}
+                      ></span>
+                      <span className="text-xs text-gray-700" title={u.name || u.id}>{u.name || 'User'}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
             {/* Auto-save indicator */}
             <div className="flex items-center space-x-2">
@@ -521,4 +596,4 @@ const Document = ({ onSave }) => {
   );
 };
 
-export default Document; 
+export default Document;
