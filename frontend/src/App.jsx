@@ -1,10 +1,11 @@
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import React, { Suspense, lazy } from 'react';
 import { useState } from 'react';
 import Home from './components/Home';
 import Login from './components/Login';
 import Register from './components/Register';
 import DocumentList from './components/DocumentList';
-import Document from './components/Document';
+const Document = lazy(() => import('./components/Document'));
 import PrivateRoute from './components/PrivateRoute';
 
 function App() {
@@ -12,6 +13,16 @@ function App() {
     <Router>
       <AppRoutes />
     </Router>
+  );
+}
+
+function NotFound() {
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 px-4">
+      <h1 className="text-4xl font-bold text-gray-800 mb-4">404 - Page Not Found</h1>
+      <p className="text-gray-600 mb-8 text-center">The page you are looking for does not exist.</p>
+      <a href="/" className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">Go Home</a>
+    </div>
   );
 }
 
@@ -32,11 +43,9 @@ function AppRoutes() {
 
   return (
     <Routes>
-      {/* Public routes */}
       <Route path="/" element={<Home />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
-      {/* Protected routes */}
       <Route
         path="/documents"
         element={
@@ -52,11 +61,13 @@ function AppRoutes() {
         path="/documents/:id"
         element={
           <PrivateRoute>
-            <Document onSave={handleSaveDocument} />
+            <Suspense fallback={<div>Loading document...</div>}>
+              <Document onSave={handleSaveDocument} />
+            </Suspense>
           </PrivateRoute>
         }
       />
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="*" element={<NotFound />} />
     </Routes>
   );
 }

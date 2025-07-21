@@ -1,4 +1,3 @@
-// --- client/src/AuthContext.jsx ---
 import { createContext, useContext, useEffect, useState } from "react";
 import { auth } from "./firebase";
 import {
@@ -19,11 +18,9 @@ export const AuthProvider = ({ children }) => {
     baseURL: "http://localhost:5000/api",
     withCredentials: true,
   });
-
-  // Wait for Firebase to restore session (fixes refresh bug)
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      setFirebaseReady(true); // Firebase has finished loading
+      setFirebaseReady(true);
       if (firebaseUser) {
         try {
           const res = await api.get("/auth/protected");
@@ -42,7 +39,11 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const emailLogin = async (email, password) => {
-    const userCredential = await signInWithEmailAndPassword(auth, email, password);
+    const userCredential = await signInWithEmailAndPassword(
+      auth,
+      email,
+      password
+    );
     const idToken = await userCredential.user.getIdToken();
 
     await api.post("/auth/login", { idToken });
@@ -53,7 +54,11 @@ export const AuthProvider = ({ children }) => {
 
   const register = async (name, email, password) => {
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
       const idToken = await userCredential.user.getIdToken();
 
       await api.post("/auth/login", { idToken });
@@ -79,7 +84,6 @@ export const AuthProvider = ({ children }) => {
     <AuthContext.Provider
       value={{ user, emailLogin, register, logout, loading }}
     >
-      {/* Render children only when firebase has checked auth */}
       {!loading ? children : <div>Loading...</div>}
     </AuthContext.Provider>
   );
