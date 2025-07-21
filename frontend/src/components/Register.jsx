@@ -24,47 +24,50 @@ const Register = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-100 to-blue-200 px-4">
-      <div className="bg-white shadow-lg rounded-2xl p-8 w-full max-w-md">
-        <h2 className="text-3xl font-bold mb-6 text-center text-gray-800">Register</h2>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-100 to-purple-100 px-2 md:px-4">
+      <div className="bg-white rounded-lg shadow-lg p-4 md:p-8 w-full max-w-md mx-auto">
+        <h2 className="text-xl md:text-2xl font-bold mb-6 text-center">Register</h2>
         <form onSubmit={handleRegister} className="space-y-4">
           <input
             type="text"
-            placeholder="Full Name"
-            className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+            placeholder="Name"
             value={name}
             onChange={(e) => setName(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm md:text-base"
+            required
           />
           <input
             type="email"
             placeholder="Email"
-            className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm md:text-base"
+            required
           />
           <input
             type="password"
             placeholder="Password"
-            className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm md:text-base"
+            required
           />
           <button
             type="submit"
-            className="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 rounded-md transition"
+            className="w-full py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm md:text-base"
           >
             Register
           </button>
         </form>
-        <p className="text-center text-sm text-gray-600 mt-4">
-          Already have an account?{" "}
+        <div className="mt-4 text-center text-xs md:text-sm">
+          Already have an account?{' '}
           <span
-            className="text-purple-600 hover:underline cursor-pointer"
-            onClick={() => navigate("/login")}
+            className="text-blue-600 hover:underline cursor-pointer"
+            onClick={() => navigate('/login')}
           >
-            Login here
+            Login
           </span>
-        </p>
+        </div>
       </div>
     </div>
   );

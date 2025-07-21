@@ -19,6 +19,10 @@ import { Awareness, encodeAwarenessUpdate } from "y-protocols/awareness.js";
 dotenv.config();
 
 const app = express();
+
+app.use(helmet());
+app.use(morgan("dev"));
+
 const server = http.createServer(app);
 const io = new SocketIOServer(server, {
   cors: {
@@ -94,11 +98,20 @@ app.use(
 );
 app.use(cookieParser());
 app.use(express.json());
-app.use(helmet());
-app.use(morgan("dev"));
 
 app.use("/api/auth", authRoutes);
 app.use("/api/docs", docsRoutes);
+
+
+
+// Global error handler (should be after all other app.use/routes)
+app.use((err, req, res, next) => {
+  console.error('Global error handler:', err);
+  res.status(err.status || 500).json({
+    error: err.message || 'Internal Server Error'
+  });
+});
+
 
 io.on("connection", (socket) => {
   console.log("Client connected:", socket.id);

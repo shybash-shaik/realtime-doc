@@ -2,6 +2,7 @@ import express from 'express';
 import { getFirestore } from 'firebase-admin/firestore';
 import { requireDocumentRole } from '../middlewares/documentRole.js';
 import verifyJWT from '../middlewares/auth.js';
+import sanitizeHtml from 'sanitize-html';
 
 const router = express.Router();
 const db = getFirestore();
@@ -50,11 +51,16 @@ router.get('/:id', requireDocumentRole(['admin', 'editor', 'viewer']), async (re
 
 router.post('/', async (req, res) => {
   try {
-    const { title, content = '', folder = null } = req.body;
+    // Sanitize user input
+    const title = sanitizeHtml(req.body.title);
+    const content = sanitizeHtml(req.body.content || '');
+    const folder = req.body.folder ? sanitizeHtml(req.body.folder) : null;
+
     const userId = req.user?.uid; // Use authenticated user's UID
     if (!title || !userId) {
       return res.status(400).json({ error: 'Title and userId are required' });
     }
+    // Add creator as admin in permissions
     const permissions = [
       { userId, role: 'admin' }
     ];
@@ -89,10 +95,11 @@ router.put('/:id', requireDocumentRole(['admin', 'editor']), async (req, res) =>
     const updateData = {
       updatedAt: new Date()
     };
-    if (title) updateData.title = title;
+    if (title) updateData.title = sanitizeHtml(title);
     if (userId) updateData.userId = userId;
-    if (content !== undefined) updateData.content = content;
-    if (folder !== undefined) updateData.folder = folder;
+    if (content !== undefined) updateData.content = sanitizeHtml(content);
+    if (folder !== undefined) updateData.folder = sanitizeHtml(folder);
+
     await docRef.update(updateData);
     const updatedDoc = await docRef.get();
     res.json({
@@ -147,7 +154,8 @@ router.get('/folders/all', async (req, res) => {
 });
 router.post('/folders', async (req, res) => {
   try {
-    const { name } = req.body;
+    const name = sanitizeHtml(req.body.name);
+
     const userId = req.user?.uid;
     if (!name || !userId) {
       return res.status(400).json({ error: 'Name and userId are required' });

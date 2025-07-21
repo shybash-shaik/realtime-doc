@@ -1,4 +1,6 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
+
+
 import {
   Plus,
   FileText,
@@ -12,8 +14,11 @@ import {
 } from "lucide-react";
 import api from "../api/docs";
 import sanitizeHtml from "sanitize-html";
+import { useAuth } from "./AuthContext";
+
 
 const DocumentList = ({ onDocumentSelect, onCreateDocument }) => {
+  const { user } = useAuth();
   const [documents, setDocuments] = useState([]);
   const [folders, setFolders] = useState([]);
   const [selectedFolder, setSelectedFolder] = useState(null);
@@ -24,6 +29,8 @@ const DocumentList = ({ onDocumentSelect, onCreateDocument }) => {
   const [searchTimeout, setSearchTimeout] = useState(null);
   const [showCreateFolderModal, setShowCreateFolderModal] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
 
   useEffect(() => {
     fetchFolders();
@@ -100,7 +107,12 @@ const DocumentList = ({ onDocumentSelect, onCreateDocument }) => {
       await api.delete(`/docs/${documentId}`);
       setDocuments((prev) => prev.filter((doc) => doc.id !== documentId));
     } catch (error) {
-      console.error("Error deleting document:", error);
+      if (error.response?.status === 403) {
+        alert("Only admin users can delete documents.");
+      } else {
+        console.error("Error deleting document:", error);
+        alert("Failed to delete document. Please try again.");
+      }
     }
   };
 
@@ -113,6 +125,7 @@ const DocumentList = ({ onDocumentSelect, onCreateDocument }) => {
       setNewFolderName("");
       setShowCreateFolderModal(false);
     } catch (error) {
+
       console.error("Error creating folder:", error);
     }
   };
@@ -127,65 +140,94 @@ const DocumentList = ({ onDocumentSelect, onCreateDocument }) => {
     });
   };
 
+  const filteredDocuments = useMemo(
+    () => documents.filter(document => document.title && document.title.trim() !== ""),
+    [documents]
+  );
+
   return (
-    <div className="min-h-screen bg-gray-50 p-6 flex">
-      <div className="w-64 mr-8">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold text-gray-800 flex items-center">
-            <FolderIcon className="w-5 h-5 mr-2" />
-            Folders
-          </h2>
-          <button
-            onClick={() => setShowCreateFolderModal(true)}
-            className="p-2 rounded-full bg-blue-100 hover:bg-blue-200 text-blue-600"
-            title="Create Folder"
-          >
-            <FolderPlus className="w-5 h-5" />
-          </button>
-        </div>
-        <ul className="space-y-2">
-          <li>
+    <div className="min-h-screen bg-gray-50 flex flex-col md:flex-row">
+      {/* Mobile sidebar toggle button */}
+      <button
+        className="md:hidden p-2 fixed top-4 left-4 z-50 bg-white rounded shadow border"
+        onClick={() => setSidebarOpen(!sidebarOpen)}
+        aria-label="Open sidebar"
+      >
+        {/* Hamburger icon */}
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+      </button>
+      {/* Sidebar */}
+      <div className={`fixed md:static top-0 left-0 h-full w-64 bg-white z-40 transition-transform duration-200 ease-in-out border-r border-gray-200
+        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 md:block`}>
+        <div className="h-full overflow-y-auto p-6 pt-16 md:pt-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold text-gray-800 flex items-center">
+              <FolderIcon className="w-5 h-5 mr-2" />
+              Folders
+            </h2>
             <button
-              className={`w-full text-left px-3 py-2 rounded-lg ${
-                selectedFolder === null
-                  ? "bg-blue-100 text-blue-700 font-semibold"
-                  : "hover:bg-gray-100 text-gray-800"
-              }`}
-              onClick={() => setSelectedFolder(null)}
+              onClick={() => setShowCreateFolderModal(true)}
+              className="p-2 rounded-full bg-blue-100 hover:bg-blue-200 text-blue-600"
+              title="Create Folder"
             >
-              All Documents
+              <FolderPlus className="w-5 h-5" />
             </button>
-          </li>
-          {folders.map((folder) => (
-            <li key={folder.id}>
+          </div>
+          <ul className="space-y-2">
+            <li>
               <button
-                className={`w-full text-left px-3 py-2 rounded-lg flex items-center justify-between ${
-                  selectedFolder === folder.name
+                className={`w-full text-left px-3 py-2 rounded-lg ${
+                  selectedFolder === null
                     ? "bg-blue-100 text-blue-700 font-semibold"
                     : "hover:bg-gray-100 text-gray-800"
                 }`}
-                onClick={() => setSelectedFolder(folder.name)}
+                onClick={() => setSelectedFolder(null)}
               >
-                <span className="flex items-center">
-                  <FolderIcon className="w-4 h-4 mr-2" />
-                  {folder.name}
-                </span>
+                All Documents
               </button>
             </li>
-          ))}
-        </ul>
+            {folders.map((folder) => (
+              <li key={folder.id}>
+                <button
+                  className={`w-full text-left px-3 py-2 rounded-lg flex items-center justify-between ${
+                    selectedFolder === folder.name
+                      ? "bg-blue-100 text-blue-700 font-semibold"
+                      : "hover:bg-gray-100 text-gray-800"
+                  }`}
+                  onClick={() => setSelectedFolder(folder.name)}
+                >
+                  <span className="flex items-center">
+                    <FolderIcon className="w-4 h-4 mr-2" />
+                    {folder.name}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
       </div>
-      <div className="flex-1">
-        <div className="flex items-center justify-between mb-8">
+      {/* Overlay for mobile sidebar */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-30 z-30 md:hidden"
+          onClick={() => setSidebarOpen(false)}
+        ></div>
+      )}
+      {/* Main content */}
+      <div className="flex-1 p-4 md:p-8 md:ml-0 mt-16 md:mt-0">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 gap-4 md:gap-0">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Documents</h1>
-            <p className="text-gray-600 mt-2">
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Documents</h1>
+            <p className="text-gray-600 mt-2 text-sm md:text-base">
+
               Create and manage your collaborative documents
             </p>
           </div>
           <button
             onClick={() => setShowCreateModal(true)}
-            className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors w-full md:w-auto"
           >
             <Plus className="w-4 h-4" />
             <span>New Document</span>
@@ -222,57 +264,60 @@ const DocumentList = ({ onDocumentSelect, onCreateDocument }) => {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {documents.map((document) => (
-              <div
-                key={document.id}
-                className="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow cursor-pointer"
-                onClick={() => onDocumentSelect(document)}
-              >
-                <div className="p-6">
-                  <div className="flex items-start justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-gray-900 truncate">
-                      {document.title}
-                    </h3>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        deleteDocument(document.id);
-                      }}
-                      className="text-gray-400 hover:text-red-500 transition-colors"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-
-                  <div className="space-y-2 text-sm text-gray-600">
-                    <div className="flex items-center space-x-2">
-                      <Calendar className="w-4 h-4" />
-                      <span>Updated {formatDate(document.updatedAt)}</span>
+            {filteredDocuments.map((document) => (
+                <div
+                  key={document.id}
+                  className="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow cursor-pointer"
+                  onClick={() => onDocumentSelect(document)}
+                >
+                  <div className="p-6">
+                    <div className="flex items-start justify-between mb-4">
+                      <h3 className="text-lg font-semibold text-gray-900 truncate">
+                        {document.title}
+                      </h3>
+                      {document.permissions?.some(p => p.userId === user?.uid && p.role === 'admin') && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            deleteDocument(document.id);
+                          }}
+                          className="text-gray-400 hover:text-red-500 transition-colors"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <User className="w-4 h-4" />
-                      <span>
-                        {document.collaborators?.length || 1} collaborator
-                        {(document.collaborators?.length || 1) !== 1 ? "s" : ""}
-                      </span>
-                    </div>
-                  </div>
 
-                  <div className="mt-4 pt-4 border-t border-gray-100">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onDocumentSelect(document);
-                      }}
-                      className="flex items-center space-x-2 text-blue-600 hover:text-blue-700 transition-colors"
-                    >
-                      <Edit className="w-4 h-4" />
-                      <span>Open Document</span>
-                    </button>
+                    <div className="space-y-2 text-sm text-gray-600">
+                      <div className="flex items-center space-x-2">
+                        <Calendar className="w-4 h-4" />
+                        <span>Updated {formatDate(document.updatedAt)}</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <User className="w-4 h-4" />
+                        <span>
+                          {document.collaborators?.length || 1} collaborator
+                          {(document.collaborators?.length || 1) !== 1 ? "s" : ""}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 pt-4 border-t border-gray-100">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDocumentSelect(document);
+                        }}
+                        className="flex items-center space-x-2 text-blue-600 hover:text-blue-700 transition-colors"
+                      >
+                        <Edit className="w-4 h-4" />
+                        <span>Open Document</span>
+                      </button>
+                    </div>
+
                   </div>
                 </div>
-              </div>
-            ))}
+              ))}
           </div>
         )}
       </div>
