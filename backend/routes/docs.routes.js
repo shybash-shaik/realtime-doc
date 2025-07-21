@@ -139,8 +139,8 @@ router.delete('/:id', requireDocumentRole(['admin']), async (req, res) => {
 
 router.get('/folders/all', async (req, res) => {
   try {
-    const userId = req.user?.uid;
-    const foldersSnapshot = await db.collection('folders').where('userId', '==', userId).get();
+    // Fetch all folders, not just those belonging to the current user
+    const foldersSnapshot = await db.collection('folders').get();
     const folders = [];
     foldersSnapshot.forEach(folder => {
       folders.push({ id: folder.id, ...folder.data() });

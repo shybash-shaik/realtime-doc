@@ -15,6 +15,7 @@ import authRoutes from "./routes/auth.routes.js";
 import docsRoutes from "./routes/docs.routes.js";
 import * as Y from "yjs";
 import { Awareness, encodeAwarenessUpdate } from "y-protocols/awareness.js";
+import commentRoutes from './routes/comments.routes.js';
 
 dotenv.config();
 
@@ -100,8 +101,8 @@ app.use(cookieParser());
 app.use(express.json());
 
 app.use("/api/auth", authRoutes);
+app.use('/api', commentRoutes);
 app.use("/api/docs", docsRoutes);
-
 
 
 // Global error handler (should be after all other app.use/routes)
