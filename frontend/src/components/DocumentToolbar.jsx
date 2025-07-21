@@ -1,5 +1,5 @@
 import React from 'react';
-import { Bold, Italic, List, ListOrdered, Code, Table as TableIcon, MessageCircle } from 'lucide-react';
+import { Bold, Italic, List, ListOrdered, Code, Table as TableIcon } from 'lucide-react';
 
 const DocumentToolbar = ({ editor, onAddComment }) => (
   <div className="bg-white border-b border-gray-200 px-2 md:px-6 py-2 flex flex-wrap md:flex-nowrap items-center space-x-2 md:space-x-2 space-y-2 md:space-y-0">
@@ -40,16 +40,19 @@ const DocumentToolbar = ({ editor, onAddComment }) => (
       >
         <TableIcon className="w-4 h-4" />
       </button>
-      <button
-        onClick={onAddComment}
-        className={`p-2 rounded ${editor && !editor.state.selection.empty ? 'bg-yellow-100 hover:bg-yellow-200 text-yellow-800' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}
-        disabled={!editor || editor.state.selection.empty}
-        title="Add comment to selected text"
-      >
-        <MessageCircle className="w-4 h-4" />
-      </button>
+      {/* Add Comment Button */}
+      {onAddComment && (
+        <button
+          onClick={onAddComment}
+          disabled={!editor || editor.state.selection.empty}
+          className={`p-2 rounded ${editor && !editor.state.selection.empty ? 'bg-yellow-100 hover:bg-yellow-200 text-yellow-800' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}
+          title="Add comment to selected text"
+        >
+          💬
+        </button>
+      )}
     </div>
   </div>
 );
 
-export default React.memo(DocumentToolbar); 
+export default DocumentToolbar; 

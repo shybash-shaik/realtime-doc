@@ -2,8 +2,7 @@ openapi: 3.0.0
 info:
   title: Collaborative Document API
   version: 1.0.0
-  description: API for collaborative document editing app
-
+  description: API for real-time collaborative document editing, comments, sharing, and permissions.
 servers:
   - url: http://localhost:5000/api
 
@@ -13,8 +12,16 @@ components:
       type: apiKey
       in: cookie
       name: token
-
   schemas:
+    User:
+      type: object
+      properties:
+        uid:
+          type: string
+        email:
+          type: string
+        name:
+          type: string
     Document:
       type: object
       properties:
@@ -29,21 +36,35 @@ components:
         permissions:
           type: array
           items:
-            $ref: '#/components/schemas/Permission'
+            type: object
+            properties:
+              userId:
+                type: string
+              role:
+                type: string
         createdAt:
           type: string
-          format: date-time
         updatedAt:
           type: string
-          format: date-time
-    Permission:
+        shareToken:
+          type: string
+        sharePermission:
+          type: string
+    Comment:
       type: object
       properties:
+        id:
+          type: string
         userId:
           type: string
-        role:
+        anchor:
+          type: object
+        content:
           type: string
-          enum: [admin, editor, viewer]
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
     Folder:
       type: object
       properties:
@@ -53,6 +74,10 @@ components:
           type: string
         userId:
           type: string
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
 
 security:
   - cookieAuth: []
@@ -60,7 +85,7 @@ security:
 paths:
   /auth/login:
     post:
-      summary: Login with Firebase token
+      summary: Login with Firebase ID token
       requestBody:
         required: true
         content:
@@ -73,26 +98,64 @@ paths:
       responses:
         '200':
           description: Login successful
-        '401':
-          description: Unauthorized
-
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
   /auth/logout:
     post:
       summary: Logout
       responses:
         '200':
           description: Logout successful
-
   /auth/protected:
     get:
       summary: Get current user info
       responses:
         '200':
           description: User info
-
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+  /auth/user-info:
+    post:
+      summary: Get info for user IDs
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                uids:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '200':
+          description: User info array
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  users:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/User'
   /docs:
     get:
-      summary: List documents
+      summary: List all documents
+      parameters:
+        - in: query
+          name: folder
+          schema:
+            type: string
+        - in: query
+          name: q
+          schema:
+            type: string
       responses:
         '200':
           description: List of documents
@@ -124,10 +187,9 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Document'
-
   /docs/{id}:
     get:
-      summary: Get document by ID
+      summary: Get a document by ID
       parameters:
         - in: path
           name: id
@@ -142,7 +204,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Document'
     put:
-      summary: Update document
+      summary: Update a document
       parameters:
         - in: path
           name: id
@@ -165,8 +227,12 @@ paths:
       responses:
         '200':
           description: Document updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Document'
     delete:
-      summary: Delete document
+      summary: Delete a document
       parameters:
         - in: path
           name: id
@@ -176,7 +242,6 @@ paths:
       responses:
         '200':
           description: Document deleted
-
   /docs/{id}/permissions:
     put:
       summary: Update document permissions
@@ -196,14 +261,151 @@ paths:
                 permissions:
                   type: array
                   items:
-                    $ref: '#/components/schemas/Permission'
+                    type: object
+                    properties:
+                      userId:
+                        type: string
+                      role:
+                        type: string
       responses:
         '200':
           description: Permissions updated
-
+  /docs/{id}/share:
+    post:
+      summary: Generate or update a shareable link
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                permission:
+                  type: string
+                  enum: [viewer, commenter, editor]
+      responses:
+        '200':
+          description: Share link generated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  shareToken:
+                    type: string
+                  sharePermission:
+                    type: string
+  /docs/shared/{token}:
+    get:
+      summary: Fetch a document by share token
+      parameters:
+        - in: path
+          name: token
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Document with share permission
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Document'
+  /docs/{docId}/comments:
+    get:
+      summary: List all comments for a document
+      parameters:
+        - in: path
+          name: docId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of comments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Comment'
+    post:
+      summary: Add a comment to a document
+      parameters:
+        - in: path
+          name: docId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                anchor:
+                  type: object
+                content:
+                  type: string
+      responses:
+        '201':
+          description: Comment created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Comment'
+  /docs/{docId}/comments/{commentId}:
+    patch:
+      summary: Update a comment
+      parameters:
+        - in: path
+          name: docId
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: commentId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                content:
+                  type: string
+      responses:
+        '200':
+          description: Comment updated
+    delete:
+      summary: Delete a comment
+      parameters:
+        - in: path
+          name: docId
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: commentId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Comment deleted
   /docs/folders/all:
     get:
-      summary: List folders
+      summary: List all folders
       responses:
         '200':
           description: List of folders
@@ -213,10 +415,9 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Folder'
-
   /docs/folders:
     post:
-      summary: Create folder
+      summary: Create a new folder
       requestBody:
         required: true
         content:
@@ -233,10 +434,9 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Folder'
-
   /docs/folders/{id}:
     delete:
-      summary: Delete folder and its documents
+      summary: Delete a folder and its documents
       parameters:
         - in: path
           name: id

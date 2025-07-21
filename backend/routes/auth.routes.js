@@ -6,7 +6,6 @@ import { body, validationResult } from 'express-validator';
 
 const router = express.Router();
 
-// Secure login endpoint
 router.post(
   '/login',
   [

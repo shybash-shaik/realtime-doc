@@ -13,9 +13,11 @@ import {
 import api from "../api/docs";
 import sanitizeHtml from "sanitize-html";
 import { useAuth } from "./AuthContext";
+import { useNavigate } from "react-router-dom";
 
 const DocumentList = ({ onDocumentSelect, onCreateDocument }) => {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const [documents, setDocuments] = useState([]);
   const [folders, setFolders] = useState([]);
   const [selectedFolder, setSelectedFolder] = useState(null);
@@ -142,18 +144,15 @@ const DocumentList = ({ onDocumentSelect, onCreateDocument }) => {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col md:flex-row">
-      {/* Mobile sidebar toggle button */}
       <button
         className="md:hidden p-2 fixed top-4 left-4 z-50 bg-white rounded shadow border"
         onClick={() => setSidebarOpen(!sidebarOpen)}
         aria-label="Open sidebar"
       >
-        {/* Hamburger icon */}
         <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
         </svg>
       </button>
-      {/* Sidebar */}
       <div className={`fixed md:static top-0 left-0 h-full w-64 bg-white z-40 transition-transform duration-200 ease-in-out border-r border-gray-200
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 md:block`}>
         <div className="h-full overflow-y-auto p-6 pt-16 md:pt-6">
@@ -203,14 +202,12 @@ const DocumentList = ({ onDocumentSelect, onCreateDocument }) => {
           </ul>
         </div>
       </div>
-      {/* Overlay for mobile sidebar */}
       {sidebarOpen && (
         <div
           className="fixed inset-0 bg-black bg-opacity-30 z-30 md:hidden"
           onClick={() => setSidebarOpen(false)}
         ></div>
       )}
-      {/* Main content */}
       <div className="flex-1 p-4 md:p-8 md:ml-0 mt-16 md:mt-0">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 gap-4 md:gap-0">
           <div>
@@ -219,13 +216,24 @@ const DocumentList = ({ onDocumentSelect, onCreateDocument }) => {
               Create and manage your collaborative documents
             </p>
           </div>
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors w-full md:w-auto"
-          >
-            <Plus className="w-4 h-4" />
-            <span>New Document</span>
-          </button>
+          <div className="flex flex-col md:flex-row gap-2 md:gap-4 items-center w-full md:w-auto">
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors w-full md:w-auto"
+            >
+              <Plus className="w-4 h-4" />
+              <span>New Document</span>
+            </button>
+            <button
+              onClick={async () => {
+                await logout();
+                navigate("/login");
+              }}
+              className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-sm md:text-base"
+            >
+              Logout
+            </button>
+          </div>
         </div>
         <div className="mb-6">
           <input

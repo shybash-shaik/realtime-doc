@@ -14,6 +14,7 @@ import { io } from 'socket.io-client';
 import * as Y from 'yjs';
 import { Awareness } from 'y-protocols/awareness';
 import SocketIOProvider from './SocketIOProvider';
+import CommentMark from './extensions/CommentMark';
 
 const useYjsProvider = (documentId, user, userId, canEdit, autoSave, docObj) => {
   const [isYjsReady, setIsYjsReady] = useState(false);
@@ -42,6 +43,7 @@ const useYjsProvider = (documentId, user, userId, canEdit, autoSave, docObj) => 
       TableRow,
       TableHeader,
       TableCell,
+      CommentMark,
     ],
     editorProps: {
       attributes: {

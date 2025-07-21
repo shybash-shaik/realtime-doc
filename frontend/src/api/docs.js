@@ -35,3 +35,15 @@ export default instance;
 
 // // Delete document by id
 // export const deleteDocument = (id) => API_BASE.delete(`/${id}`);
+
+// Fetch all comments for a document
+export async function fetchComments(docId) {
+  const res = await instance.get(`/docs/${docId}/comments`);
+  return res.data;
+}
+
+// (Optional) Add a comment to a document
+export async function postComment(docId, content, anchor = null) {
+  const res = await instance.post(`/docs/${docId}/comments`, { content, anchor });
+  return res.data;
+}
