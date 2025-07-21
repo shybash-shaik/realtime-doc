@@ -1,4 +1,5 @@
 import admin from '../firebase/admin.js';
+import sanitizeHtml from 'sanitize-html';
 const db = admin.firestore();
 
 // Add a comment
@@ -10,9 +11,9 @@ export const addComment = async (req, res) => {
 
     const comment = {
       userId,
-      anchor,
-      content,
-      parentId: parentId || null,
+      anchor: sanitizeHtml(JSON.stringify(anchor)),
+      content: sanitizeHtml(content),
+      parentId: parentId ? sanitizeHtml(parentId) : null,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     };
@@ -44,7 +45,7 @@ export const updateComment = async (req, res) => {
     const { content } = req.body;
     const ref = db.collection('documents').doc(docId).collection('comments').doc(commentId);
     await ref.update({
-      content,
+      content: sanitizeHtml(content),
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
     res.json({ success: true });
