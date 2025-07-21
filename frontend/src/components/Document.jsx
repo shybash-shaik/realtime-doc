@@ -9,6 +9,10 @@ import DocumentEditor from "./document/DocumentEditor";
 import CollaboratorsList from "./document/CollaboratorsList";
 import useDocumentLoader from "./document/useDocumentLoader";
 import useYjsProvider from "./document/useYjsProvider";
+import { Mark } from '@tiptap/core';
+import CommentSidebar from "./document/CommentSidebar";
+import CommentModal from "./document/CommentModal";
+import ShareModal from "./document/ShareModal";
 
 const Document = ({ onSave }) => {
   const { id: paramId } = useParams();
@@ -35,6 +39,12 @@ const Document = ({ onSave }) => {
   const [lookupLoading, setLookupLoading] = useState(false);
   const [userInfoMap, setUserInfoMap] = useState({});
   const autoSaveTimeoutRef = useRef(null);
+  const [focusedCommentId, setFocusedCommentId] = useState(null);
+  const [showCommentModal, setShowCommentModal] = useState(false);
+  const [commentSelection, setCommentSelection] = useState(null);
+  const [showSidebar, setShowSidebar] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [shareInfo, setShareInfo] = useState(null);
 
   const { editor, isYjsReady, onlineUsers, setOnlineUsers } = useYjsProvider(
     documentId,
@@ -121,6 +131,32 @@ const Document = ({ onSave }) => {
     }
   };
 
+  // Add comment to selected text
+  const handleAddComment = () => {
+    if (!editor || editor.state.selection.empty) return;
+    const { from, to } = editor.state.selection;
+    const anchor = { from, to, text: editor.state.doc.textBetween(from, to) };
+    setCommentSelection(anchor);
+    setShowCommentModal(true);
+  };
+
+  const handleSubmitComment = async (commentText) => {
+    if (!editor || !commentSelection || !commentText) return;
+    try {
+      const res = await api.post(`/docs/${documentId}/comments`, {
+        anchor: commentSelection,
+        content: commentText,
+      });
+      const commentId = res.data.id;
+      editor.chain().focus().setMark('comment', { commentId }).run();
+      setShowCommentModal(false);
+      setCommentSelection(null);
+    } catch (err) {
+      alert('Failed to add comment');
+      console.error(err);
+    }
+  };
+
   useEffect(() => {
     const fetchUserInfo = async () => {
       if (!docObj?.permissions?.length) return;
@@ -152,6 +188,44 @@ const Document = ({ onSave }) => {
       editor.commands.setContent(docObj.content);
     }
   }, [editor, isYjsReady, docObj]);
+
+  useEffect(() => {
+    if (!editor) return;
+    const handleClick = (event) => {
+      const target = event.target;
+      if (target && target.nodeType === 1 && target.hasAttribute('data-comment-id')) {
+        const commentId = target.getAttribute('data-comment-id');
+        setFocusedCommentId(commentId);
+        setShowSidebar(true); // Auto-open sidebar on highlight click
+      }
+    };
+    const editorEl = document.querySelector('.ProseMirror');
+    if (editorEl) {
+      editorEl.addEventListener('click', handleClick);
+    }
+    return () => {
+      if (editorEl) {
+        editorEl.removeEventListener('click', handleClick);
+      }
+    };
+  }, [editor]);
+
+  // Check for share token in URL
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('token');
+    if (token) {
+      // Fetch document by share token
+      api.get(`/docs/shared/${token}`)
+        .then(res => {
+          setDocObj(res.data);
+          // Optionally set permission in state for UI
+        })
+        .catch(() => {
+          alert('Invalid or expired share link.');
+        });
+    }
+  }, [documentId]);
 
   if (loading) {
     return (
@@ -190,35 +264,74 @@ const Document = ({ onSave }) => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <DocumentHeader
-        title={docObj?.title || documentTitle || "Untitled Document"}
-        myRole={myRole}
-        isConnected={true}
-        onlineUsers={onlineUsers}
-        saveStatus={saveStatus}
-        isAdmin={isAdmin}
-        canEdit={canEdit}
-        onDelete={undefined}
-      />
-      <DocumentToolbar editor={editor} />
-      <DocumentEditor editor={editor} />
-      <CollaboratorsList
-        isAdmin={isAdmin}
-        docObj={docObj}
-        permissionsError={permissionsError}
-        userInfoMap={userInfoMap}
-        user={user}
-        handleChangeRole={handleChangeRole}
-        handleRemoveUser={handleRemoveUser}
-        newUserEmail={newUserEmail}
-        setNewUserEmail={setNewUserEmail}
-        newUserRole={newUserRole}
-        setNewUserRole={setNewUserRole}
-        handleAddUserByEmail={handleAddUserByEmail}
-        lookupLoading={lookupLoading}
-        lookupError={lookupError}
-      />
+    <div className="min-h-screen bg-gray-50 flex flex-col md:flex-row">
+      <div className="flex-1">
+        <DocumentHeader
+          title={docObj?.title || documentTitle || "Untitled Document"}
+          myRole={myRole}
+          isConnected={true}
+          onlineUsers={onlineUsers}
+          saveStatus={saveStatus}
+          isAdmin={isAdmin}
+          canEdit={canEdit}
+          onDelete={undefined}
+        />
+        <div className="flex items-center gap-2 mb-2">
+          <DocumentToolbar editor={editor} onAddComment={handleAddComment} />
+          <button
+            className="px-3 py-1 bg-blue-100 text-blue-800 rounded hover:bg-blue-200 border border-blue-300"
+            onClick={() => setShowShareModal(true)}
+          >
+            Share
+          </button>
+          <button
+            className="ml-auto px-3 py-1 bg-yellow-100 text-yellow-800 rounded hover:bg-yellow-200 border border-yellow-300"
+            onClick={() => setShowSidebar((v) => !v)}
+            title={showSidebar ? "Hide Comments" : "Show Comments"}
+          >
+            {showSidebar ? "Hide Comments" : "Show Comments"}
+          </button>
+        </div>
+        <DocumentEditor editor={editor} />
+        <CollaboratorsList
+          isAdmin={isAdmin}
+          docObj={docObj}
+          permissionsError={permissionsError}
+          userInfoMap={userInfoMap}
+          user={user}
+          handleChangeRole={handleChangeRole}
+          handleRemoveUser={handleRemoveUser}
+          newUserEmail={newUserEmail}
+          setNewUserEmail={setNewUserEmail}
+          newUserRole={newUserRole}
+          setNewUserRole={setNewUserRole}
+          handleAddUserByEmail={handleAddUserByEmail}
+          lookupLoading={lookupLoading}
+          lookupError={lookupError}
+        />
+      </div>
+      {showSidebar && (
+        <CommentSidebar
+          docId={documentId}
+          focusedCommentId={focusedCommentId}
+          onClose={() => setShowSidebar(false)}
+        />
+      )}
+      {showCommentModal && (
+        <CommentModal
+          anchor={commentSelection}
+          onSubmit={handleSubmitComment}
+          onClose={() => { setShowCommentModal(false); setCommentSelection(null); }}
+        />
+      )}
+      {showShareModal && (
+        <ShareModal
+          docId={documentId}
+          onClose={() => setShowShareModal(false)}
+          shareInfo={shareInfo}
+          setShareInfo={setShareInfo}
+        />
+      )}
     </div>
   );
 };

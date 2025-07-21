@@ -1,7 +1,7 @@
 import admin from '../firebase/admin.js';
+import sanitizeHtml from 'sanitize-html';
 const db = admin.firestore();
 
-// Add a comment
 export const addComment = async (req, res) => {
   try {
     const { docId } = req.params;
@@ -10,9 +10,9 @@ export const addComment = async (req, res) => {
 
     const comment = {
       userId,
-      anchor,
-      content,
-      parentId: parentId || null,
+      anchor: sanitizeHtml(JSON.stringify(anchor)),
+      content: sanitizeHtml(content),
+      parentId: parentId ? sanitizeHtml(parentId) : null,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     };
@@ -25,7 +25,6 @@ export const addComment = async (req, res) => {
   }
 };
 
-// Get all comments for a document
 export const getComments = async (req, res) => {
   try {
     const { docId } = req.params;
@@ -37,14 +36,13 @@ export const getComments = async (req, res) => {
   }
 };
 
-// Update a comment
 export const updateComment = async (req, res) => {
   try {
     const { docId, commentId } = req.params;
     const { content } = req.body;
     const ref = db.collection('documents').doc(docId).collection('comments').doc(commentId);
     await ref.update({
-      content,
+      content: sanitizeHtml(content),
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
     res.json({ success: true });
@@ -53,7 +51,6 @@ export const updateComment = async (req, res) => {
   }
 };
 
-// Delete a comment
 export const deleteComment = async (req, res) => {
   try {
     const { docId, commentId } = req.params;

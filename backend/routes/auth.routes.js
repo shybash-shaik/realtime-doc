@@ -2,10 +2,28 @@ import express from 'express';
 import { firebaseEmailLogin,logout} from '../controllers/authController.js';
 import verifyJWT from '../middlewares/auth.js';
 import admin from '../firebase/admin.js';
+import { body, validationResult } from 'express-validator';
 
 const router = express.Router();
 
-router.post('/login', firebaseEmailLogin);
+router.post(
+  '/login',
+  [
+    body('idToken')
+      .isString()
+      .isLength({ min: 1, max: 2000 }) // JWT tokens are long, but not unbounded
+      .withMessage('Invalid or missing idToken'),
+  ],
+  (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+    next();
+  },
+  firebaseEmailLogin
+);
+
 router.post('/logout', logout);
 router.get('/protected', verifyJWT, (req, res) => {
   res.json(req.user); 

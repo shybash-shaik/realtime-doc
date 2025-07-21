@@ -3,6 +3,7 @@ import { getFirestore } from 'firebase-admin/firestore';
 import { requireDocumentRole } from '../middlewares/documentRole.js';
 import verifyJWT from '../middlewares/auth.js';
 import sanitizeHtml from 'sanitize-html';
+import { nanoid } from 'nanoid';
 
 const router = express.Router();
 const db = getFirestore();
@@ -51,7 +52,6 @@ router.get('/:id', requireDocumentRole(['admin', 'editor', 'viewer']), async (re
 
 router.post('/', async (req, res) => {
   try {
-    // Sanitize user input
     const title = sanitizeHtml(req.body.title);
     const content = sanitizeHtml(req.body.content || '');
     const folder = req.body.folder ? sanitizeHtml(req.body.folder) : null;
@@ -60,7 +60,6 @@ router.post('/', async (req, res) => {
     if (!title || !userId) {
       return res.status(400).json({ error: 'Title and userId are required' });
     }
-    // Add creator as admin in permissions
     const permissions = [
       { userId, role: 'admin' }
     ];
@@ -141,8 +140,7 @@ router.delete('/:id', requireDocumentRole(['admin']), async (req, res) => {
 
 router.get('/folders/all', async (req, res) => {
   try {
-    const userId = req.user?.uid;
-    const foldersSnapshot = await db.collection('folders').where('userId', '==', userId).get();
+    const foldersSnapshot = await db.collection('folders').get();
     const folders = [];
     foldersSnapshot.forEach(folder => {
       folders.push({ id: folder.id, ...folder.data() });
@@ -189,6 +187,37 @@ router.delete('/folders/:id', async (req, res) => {
     batch.delete(folderRef);
     await batch.commit();
     res.json({ message: 'Folder and its documents deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.post('/:id/share', requireDocumentRole(['admin']), async (req, res) => {
+  try {
+    const { permission } = req.body; // 'viewer', 'commenter', 'editor'
+    if (!['viewer', 'commenter', 'editor'].includes(permission)) {
+      return res.status(400).json({ error: 'Invalid permission' });
+    }
+    const docRef = db.collection('documents').doc(req.params.id);
+    const shareToken = nanoid(16);
+    await docRef.update({ shareToken, sharePermission: permission, updatedAt: new Date() });
+    res.json({ shareToken, sharePermission: permission });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.get('/shared/:token', async (req, res) => {
+  try {
+    const snapshot = await db.collection('documents').where('shareToken', '==', req.params.token).limit(1).get();
+    if (snapshot.empty) return res.status(404).json({ error: 'Invalid or expired share link' });
+    const doc = snapshot.docs[0];
+    const data = doc.data();
+    res.json({
+      id: doc.id,
+      ...data,
+      sharePermission: data.sharePermission || 'viewer',
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

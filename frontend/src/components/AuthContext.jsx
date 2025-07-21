@@ -66,12 +66,8 @@ export const AuthProvider = ({ children }) => {
       const res = await api.get("/auth/protected");
       setUser(res.data);
     } catch (err) {
-      if (err.code === "auth/email-already-in-use") {
-        alert("This email is already registered. Please login instead.");
-      } else {
-        alert("Registration failed: " + err.message);
-      }
-      console.error(err);
+      // Optionally, show a specific error message here
+      throw err; // Ensure error is thrown so Register.jsx can handle it
     }
   };
 
