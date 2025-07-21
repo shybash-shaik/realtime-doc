@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
+
+
 import {
   Plus,
   FileText,
@@ -14,6 +16,7 @@ import api from "../api/docs";
 import sanitizeHtml from "sanitize-html";
 import { useAuth } from "./AuthContext";
 
+
 const DocumentList = ({ onDocumentSelect, onCreateDocument }) => {
   const { user } = useAuth();
   const [documents, setDocuments] = useState([]);
@@ -27,6 +30,7 @@ const DocumentList = ({ onDocumentSelect, onCreateDocument }) => {
   const [showCreateFolderModal, setShowCreateFolderModal] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
 
   useEffect(() => {
     fetchFolders();
@@ -121,6 +125,7 @@ const DocumentList = ({ onDocumentSelect, onCreateDocument }) => {
       setNewFolderName("");
       setShowCreateFolderModal(false);
     } catch (error) {
+
       console.error("Error creating folder:", error);
     }
   };
@@ -216,6 +221,7 @@ const DocumentList = ({ onDocumentSelect, onCreateDocument }) => {
           <div>
             <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Documents</h1>
             <p className="text-gray-600 mt-2 text-sm md:text-base">
+
               Create and manage your collaborative documents
             </p>
           </div>
@@ -308,6 +314,7 @@ const DocumentList = ({ onDocumentSelect, onCreateDocument }) => {
                         <span>Open Document</span>
                       </button>
                     </div>
+
                   </div>
                 </div>
               ))}

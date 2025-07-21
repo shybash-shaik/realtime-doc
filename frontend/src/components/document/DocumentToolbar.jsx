@@ -4,6 +4,7 @@ import { Bold, Italic, List, ListOrdered, Code, Table as TableIcon } from 'lucid
 const DocumentToolbar = ({ editor }) => (
   <div className="bg-white border-b border-gray-200 px-2 md:px-6 py-2 flex flex-wrap md:flex-nowrap items-center space-x-2 md:space-x-2 space-y-2 md:space-y-0">
     <div className="flex flex-wrap items-center space-x-2 md:space-x-2 space-y-2 md:space-y-0 w-full md:w-auto">
+
       <button
         onClick={() => editor.chain().focus().toggleBold().run()}
         className={`p-2 rounded ${editor.isActive('bold') ? 'bg-gray-200' : 'hover:bg-gray-100'}`}

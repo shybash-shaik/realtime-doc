@@ -55,6 +55,7 @@ router.post('/', async (req, res) => {
     const title = sanitizeHtml(req.body.title);
     const content = sanitizeHtml(req.body.content || '');
     const folder = req.body.folder ? sanitizeHtml(req.body.folder) : null;
+
     const userId = req.user?.uid; // Use authenticated user's UID
     if (!title || !userId) {
       return res.status(400).json({ error: 'Title and userId are required' });
@@ -98,6 +99,7 @@ router.put('/:id', requireDocumentRole(['admin', 'editor']), async (req, res) =>
     if (userId) updateData.userId = userId;
     if (content !== undefined) updateData.content = sanitizeHtml(content);
     if (folder !== undefined) updateData.folder = sanitizeHtml(folder);
+
     await docRef.update(updateData);
     const updatedDoc = await docRef.get();
     res.json({
@@ -153,6 +155,7 @@ router.get('/folders/all', async (req, res) => {
 router.post('/folders', async (req, res) => {
   try {
     const name = sanitizeHtml(req.body.name);
+
     const userId = req.user?.uid;
     if (!name || !userId) {
       return res.status(400).json({ error: 'Name and userId are required' });
