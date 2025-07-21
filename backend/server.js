@@ -20,9 +20,7 @@ dotenv.config();
 
 const app = express();
 
-// Apply helmet for security headers
 app.use(helmet());
-// Apply morgan for HTTP request logging
 app.use(morgan("dev"));
 
 const server = http.createServer(app);
@@ -104,10 +102,7 @@ app.use(express.json());
 app.use("/api/auth", authRoutes);
 app.use("/api/docs", docsRoutes);
 
-// Catch-all for undefined API routes
-// app.all('/api/*', (req, res) => {
-//   res.status(404).json({ error: 'API route not found' });
-// });
+
 
 // Global error handler (should be after all other app.use/routes)
 app.use((err, req, res, next) => {
