@@ -311,9 +311,11 @@ const Document = ({ onSave }) => {
         />
       </div>
       {showSidebar && (
-        <div className="w-full md:w-80 bg-white border-l border-gray-200 p-4">
-          <CommentSidebar docId={documentId} focusedCommentId={focusedCommentId} />
-        </div>
+        <CommentSidebar
+          docId={documentId}
+          focusedCommentId={focusedCommentId}
+          onClose={() => setShowSidebar(false)}
+        />
       )}
       {showCommentModal && (
         <CommentModal
