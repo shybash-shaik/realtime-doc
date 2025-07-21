@@ -1,4 +1,3 @@
-// backend/utils/permissions.js
 
 function hasDocumentRole(doc, userId, allowedRoles) {
   if (!doc.permissions) return false;

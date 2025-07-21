@@ -2,7 +2,6 @@ import admin from '../firebase/admin.js';
 import sanitizeHtml from 'sanitize-html';
 const db = admin.firestore();
 
-// Add a comment
 export const addComment = async (req, res) => {
   try {
     const { docId } = req.params;
@@ -26,7 +25,6 @@ export const addComment = async (req, res) => {
   }
 };
 
-// Get all comments for a document
 export const getComments = async (req, res) => {
   try {
     const { docId } = req.params;
@@ -38,7 +36,6 @@ export const getComments = async (req, res) => {
   }
 };
 
-// Update a comment
 export const updateComment = async (req, res) => {
   try {
     const { docId, commentId } = req.params;
@@ -54,7 +51,6 @@ export const updateComment = async (req, res) => {
   }
 };
 
-// Delete a comment
 export const deleteComment = async (req, res) => {
   try {
     const { docId, commentId } = req.params;

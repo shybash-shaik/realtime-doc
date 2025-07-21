@@ -105,7 +105,6 @@ app.use('/api', commentRoutes);
 app.use("/api/docs", docsRoutes);
 
 
-// Global error handler (should be after all other app.use/routes)
 app.use((err, req, res, next) => {
   console.error('Global error handler:', err);
   res.status(err.status || 500).json({

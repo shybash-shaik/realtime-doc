@@ -10,10 +10,25 @@ const Register = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
+  const validatePassword = (password) => {
+    const minLength = 8;
+    const hasUpper = /[A-Z]/.test(password);
+    const hasLower = /[a-z]/.test(password);
+    const hasNumber = /[0-9]/.test(password);
+    const hasSpecial = /[^A-Za-z0-9]/.test(password);
+    return (
+      password.length >= minLength && hasUpper && hasLower && hasNumber && hasSpecial
+    );
+  };
+
   const handleRegister = async (e) => {
     e.preventDefault();
     if (!name || !email || !password) return alert("All fields required");
-
+    if (!validatePassword(password)) {
+      return alert(
+        "Password must be at least 8 characters and include uppercase, lowercase, number, and special character."
+      );
+    }
     try {
       await register(name, email, password);
       navigate("/documents");
