@@ -13,6 +13,7 @@ import { Mark } from '@tiptap/core';
 import CommentSidebar from "./document/CommentSidebar";
 import CommentModal from "./document/CommentModal";
 import ShareModal from "./document/ShareModal";
+import DocumentCover from "./document/DocumentCover";
 
 const Document = ({ onSave }) => {
   const { id: paramId } = useParams();
@@ -264,8 +265,9 @@ const Document = ({ onSave }) => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col md:flex-row">
-      <div className="flex-1">
+    <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
+      {/* Top Header Navigation */}
+      <div className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-slate-200 shadow-sm">
         <DocumentHeader
           title={docObj?.title || documentTitle || "Untitled Document"}
           myRole={myRole}
@@ -276,47 +278,83 @@ const Document = ({ onSave }) => {
           canEdit={canEdit}
           onDelete={undefined}
         />
-        <div className="flex items-center gap-2 mb-2">
-          <DocumentToolbar editor={editor} onAddComment={handleAddComment} />
-          <button
-            className="px-3 py-1 bg-blue-100 text-blue-800 rounded hover:bg-blue-200 border border-blue-300"
-            onClick={() => setShowShareModal(true)}
-          >
-            Share
-          </button>
-          <button
-            className="ml-auto px-3 py-1 bg-yellow-100 text-yellow-800 rounded hover:bg-yellow-200 border border-yellow-300"
-            onClick={() => setShowSidebar((v) => !v)}
-            title={showSidebar ? "Hide Comments" : "Show Comments"}
-          >
-            {showSidebar ? "Hide Comments" : "Show Comments"}
-          </button>
+        
+        {/* Sticky Toolbar Area */}
+        <div className="flex items-center justify-between px-4 py-2 border-t border-slate-100 bg-white/50 max-w-5xl mx-auto w-full">
+          <div className="flex-1 overflow-x-auto custom-scrollbar pb-1">
+            <DocumentToolbar editor={editor} onAddComment={handleAddComment} />
+          </div>
+          <div className="flex items-center gap-2 ml-4 flex-shrink-0">
+            <button
+              className="px-4 py-1.5 bg-blue-50 text-blue-700 font-medium rounded-lg hover:bg-blue-100 transition-colors border border-blue-200 shadow-sm flex items-center"
+              onClick={() => setShowShareModal(true)}
+            >
+              <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
+              Share
+            </button>
+            <button
+              className={`px-4 py-1.5 font-medium rounded-lg transition-colors border shadow-sm flex items-center ${
+                showSidebar 
+                  ? "bg-slate-800 text-white border-slate-800 hover:bg-slate-700" 
+                  : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+              }`}
+              onClick={() => setShowSidebar((v) => !v)}
+              title={showSidebar ? "Hide Comments" : "Show Comments"}
+            >
+              <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>
+              {showSidebar ? "Close" : "Comments"}
+            </button>
+          </div>
         </div>
-        <DocumentEditor editor={editor} />
-        <CollaboratorsList
-          isAdmin={isAdmin}
-          docObj={docObj}
-          permissionsError={permissionsError}
-          userInfoMap={userInfoMap}
-          user={user}
-          handleChangeRole={handleChangeRole}
-          handleRemoveUser={handleRemoveUser}
-          newUserEmail={newUserEmail}
-          setNewUserEmail={setNewUserEmail}
-          newUserRole={newUserRole}
-          setNewUserRole={setNewUserRole}
-          handleAddUserByEmail={handleAddUserByEmail}
-          lookupLoading={lookupLoading}
-          lookupError={lookupError}
-        />
       </div>
-      {showSidebar && (
-        <CommentSidebar
-          docId={documentId}
-          focusedCommentId={focusedCommentId}
-          onClose={() => setShowSidebar(false)}
-        />
-      )}
+
+      <div className="flex-1 flex overflow-hidden relative">
+        {/* Editor Canvas */}
+        <main className={`flex-1 overflow-y-auto custom-scrollbar transition-all duration-300 ${showSidebar ? 'mr-80' : ''}`}>
+          <div className="max-w-4xl mx-auto py-12 px-8 md:px-16 min-h-[800px] bg-white my-8 shadow-sm border border-slate-200/60 rounded-lg">
+            <DocumentCover 
+              documentId={documentId} 
+              docObj={docObj} 
+              setDocObj={setDocObj} 
+              canEdit={canEdit} 
+            />
+            {/* The Editor Component handles the actual Prosemirror content */}
+            <DocumentEditor editor={editor} />
+          </div>
+          
+          <div className="max-w-4xl mx-auto pb-12 px-4">
+             <CollaboratorsList
+                isAdmin={isAdmin}
+                docObj={docObj}
+                permissionsError={permissionsError}
+                userInfoMap={userInfoMap}
+                user={user}
+                handleChangeRole={handleChangeRole}
+                handleRemoveUser={handleRemoveUser}
+                newUserEmail={newUserEmail}
+                setNewUserEmail={setNewUserEmail}
+                newUserRole={newUserRole}
+                setNewUserRole={setNewUserRole}
+                handleAddUserByEmail={handleAddUserByEmail}
+                lookupLoading={lookupLoading}
+                lookupError={lookupError}
+              />
+          </div>
+        </main>
+
+        {/* Right Sidebar for Comments */}
+        {showSidebar && (
+          <div className="w-80 border-l border-slate-200 bg-white/80 backdrop-blur-sm fixed right-0 top-[115px] bottom-0 overflow-y-auto custom-scrollbar shadow-xl z-30">
+            <CommentSidebar
+              docId={documentId}
+              focusedCommentId={focusedCommentId}
+              onClose={() => setShowSidebar(false)}
+            />
+          </div>
+        )}
+      </div>
+
+      {/* Modals */}
       {showCommentModal && (
         <CommentModal
           anchor={commentSelection}

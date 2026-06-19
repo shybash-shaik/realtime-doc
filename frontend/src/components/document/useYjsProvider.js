@@ -9,12 +9,17 @@ import Table from '@tiptap/extension-table';
 import TableRow from '@tiptap/extension-table-row';
 import TableCell from '@tiptap/extension-table-cell';
 import TableHeader from '@tiptap/extension-table-header';
+import TaskItem from '@tiptap/extension-task-item';
+import TaskList from '@tiptap/extension-task-list';
+import GlobalDragHandle from 'tiptap-extension-global-drag-handle';
 import { lowlight } from 'lowlight';
 import { io } from 'socket.io-client';
 import * as Y from 'yjs';
 import { Awareness } from 'y-protocols/awareness';
 import SocketIOProvider from './SocketIOProvider';
 import CommentMark from './extensions/CommentMark';
+import SlashCommands from './extensions/SlashCommands';
+import suggestion from './extensions/suggestion';
 
 const useYjsProvider = (documentId, user, userId, canEdit, autoSave, docObj) => {
   const [isYjsReady, setIsYjsReady] = useState(false);
@@ -26,6 +31,17 @@ const useYjsProvider = (documentId, user, userId, canEdit, autoSave, docObj) => 
   const editor = useEditor({
     extensions: [
       StarterKit.configure({ history: false, codeBlock: false }),
+      GlobalDragHandle.configure({
+        dragHandleWidth: 20,
+        scrollTreshold: 100,
+      }),
+      TaskList,
+      TaskItem.configure({
+        nested: true,
+      }),
+      SlashCommands.configure({
+        suggestion,
+      }),
       ...(isYjsReady && ydocRef.current && providerRef.current ? [
         Collaboration.configure({ document: ydocRef.current, field: 'content' }),
         CollaborationCursor.configure({
@@ -37,7 +53,7 @@ const useYjsProvider = (documentId, user, userId, canEdit, autoSave, docObj) => 
           }
         })
       ] : []),
-      Placeholder.configure({ placeholder: 'Start writing your document...' }),
+      Placeholder.configure({ placeholder: "Type '/' for commands" }),
       CodeBlockLowlight.configure({ lowlight }),
       Table.configure({ resizable: true }),
       TableRow,
@@ -66,7 +82,8 @@ const useYjsProvider = (documentId, user, userId, canEdit, autoSave, docObj) => 
       id: userId || Math.random().toString(36).substr(2, 9)
     });
     ydocRef.current = ydoc;
-    const socket = io('http://localhost:5000');
+    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+    const socket = io(backendUrl);
     socket.on('connect', () => {
       const provider = new SocketIOProvider(socket, `document-${documentId}`, ydoc);
       providerRef.current = provider;

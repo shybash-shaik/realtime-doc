@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import { useAuth } from "./AuthContext";
 import { useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
+import toast from 'react-hot-toast';
 
 const Register = () => {
   const { register } = useAuth();
@@ -9,6 +11,7 @@ const Register = () => {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const validatePassword = (password) => {
     const minLength = 8;
@@ -23,67 +26,105 @@ const Register = () => {
 
   const handleRegister = async (e) => {
     e.preventDefault();
-    if (!name || !email || !password) return alert("All fields required");
+    if (!name || !email || !password) return toast.error("All fields required");
     if (!validatePassword(password)) {
-      return alert(
+      return toast.error(
         "Password must be at least 8 characters and include uppercase, lowercase, number, and special character."
       );
     }
+    setLoading(true);
     try {
       await register(name, email, password);
+      toast.success("Account created successfully!");
       navigate("/documents");
     } catch (err) {
-      alert("Registration failed");
+      toast.error(err.message || "Registration failed");
       console.error(err);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-100 to-purple-100 px-2 md:px-4">
-      <div className="bg-white rounded-lg shadow-lg p-4 md:p-8 w-full max-w-md mx-auto">
-        <h2 className="text-xl md:text-2xl font-bold mb-6 text-center">Register</h2>
-        <form onSubmit={handleRegister} className="space-y-4">
-          <input
-            type="text"
-            placeholder="Name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm md:text-base"
-            required
-          />
-          <input
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm md:text-base"
-            required
-          />
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm md:text-base"
-            required
-          />
-          <button
-            type="submit"
-            className="w-full py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm md:text-base"
-          >
-            Register
-          </button>
-        </form>
-        <div className="mt-4 text-center text-xs md:text-sm">
-          Already have an account?{' '}
-          <span
-            className="text-blue-600 hover:underline cursor-pointer"
-            onClick={() => navigate('/login')}
-          >
-            Login
-          </span>
+    <div className="min-h-screen flex items-center justify-center bg-slate-50 relative overflow-hidden font-sans">
+      {/* Decorative Background */}
+      <div className="absolute top-[-20%] right-[-10%] w-[50%] h-[50%] rounded-full bg-indigo-300/30 blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-blue-300/30 blur-[120px] pointer-events-none" />
+
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="w-full max-w-md mx-4 z-10"
+      >
+        <div className="glass-card p-8 md:p-10">
+          <div className="text-center mb-8">
+             <div className="w-12 h-12 bg-indigo-600 rounded-xl flex items-center justify-center text-white font-bold text-2xl shadow-lg shadow-indigo-600/30 mx-auto mb-4">
+              C
+            </div>
+            <h2 className="text-2xl md:text-3xl font-bold text-slate-800 tracking-tight">Create an account</h2>
+            <p className="text-slate-500 mt-2">Join CollabDocs and start collaborating</p>
+          </div>
+
+          <form onSubmit={handleRegister} className="space-y-5">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Full Name</label>
+              <input
+                type="text"
+                placeholder="John Doe"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full px-4 py-3 bg-white/50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all text-slate-700 placeholder-slate-400"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Email address</label>
+              <input
+                type="email"
+                placeholder="you@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full px-4 py-3 bg-white/50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all text-slate-700 placeholder-slate-400"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Password</label>
+              <input
+                type="password"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full px-4 py-3 bg-white/50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all text-slate-700 placeholder-slate-400"
+                required
+              />
+              <p className="text-xs text-slate-400 mt-2">Must be at least 8 characters with upper/lowercase, number, and special character.</p>
+            </div>
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-3 bg-indigo-600 text-white font-semibold rounded-xl hover:bg-indigo-700 transition-all shadow-md shadow-indigo-600/20 active:scale-[0.98] flex justify-center items-center mt-6"
+            >
+              {loading ? (
+                 <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : (
+                "Create Account"
+              )}
+            </button>
+          </form>
+          
+          <div className="mt-8 text-center text-sm text-slate-500">
+            Already have an account?{' '}
+            <span
+              className="text-indigo-600 font-medium hover:text-indigo-700 cursor-pointer transition-colors"
+              onClick={() => navigate('/login')}
+            >
+              Sign in
+            </span>
+          </div>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 };

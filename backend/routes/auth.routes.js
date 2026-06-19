@@ -1,4 +1,5 @@
 import express from 'express';
+import { rateLimit } from 'express-rate-limit';
 import { firebaseEmailLogin,logout} from '../controllers/authController.js';
 import verifyJWT from '../middlewares/auth.js';
 import admin from '../firebase/admin.js';
@@ -6,8 +7,17 @@ import { body, validationResult } from 'express-validator';
 
 const router = express.Router();
 
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  limit: 20, // Limit each IP to 20 login/register requests per window
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  message: { error: "Too many login attempts, please try again after 15 minutes" }
+});
+
 router.post(
   '/login',
+  authLimiter,
   [
     body('idToken')
       .isString()

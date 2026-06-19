@@ -15,7 +15,9 @@ export const AuthProvider = ({ children }) => {
   const [firebaseReady, setFirebaseReady] = useState(false);
 
   const api = axios.create({
-    baseURL: "http://localhost:5000/api",
+    baseURL: import.meta.env.VITE_BACKEND_URL
+      ? `${import.meta.env.VITE_BACKEND_URL}/api`
+      : "http://localhost:5000/api",
     withCredentials: true,
   });
   useEffect(() => {

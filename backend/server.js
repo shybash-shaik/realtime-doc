@@ -3,6 +3,7 @@ import http from "http";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import dotenv from "dotenv";
+import { rateLimit } from "express-rate-limit";
 import admin from "./firebase/admin.js";
 import { getFirestore } from "firebase-admin/firestore";
 import { Server as SocketIOServer } from "socket.io";
@@ -19,10 +20,29 @@ import commentRoutes from './routes/comments.routes.js';
 
 dotenv.config();
 
+// Environment Variable Validation
+const requiredEnvs = ['JWT_SECRET', 'FIREBASE_PROJECT_ID', 'FIREBASE_CLIENT_EMAIL', 'FIREBASE_PRIVATE_KEY'];
+const missingEnvs = requiredEnvs.filter(env => !process.env[env]);
+if (missingEnvs.length > 0) {
+  console.error(`\x1b[31m[CRITICAL] Missing required environment variables:\x1b[0m ${missingEnvs.join(', ')}`);
+  console.error("Please create or update your backend/.env file.");
+  process.exit(1);
+}
+
 const app = express();
 
 app.use(helmet());
 app.use(morgan("dev"));
+
+// Global Rate Limiter
+const globalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  limit: 500, // Limit each IP to 500 requests per `window` (here, per 15 minutes).
+  standardHeaders: 'draft-8', 
+  legacyHeaders: false, 
+  message: { error: "Too many requests from this IP, please try again after 15 minutes" }
+});
+app.use(globalLimiter);
 
 const server = http.createServer(app);
 const io = new SocketIOServer(server, {

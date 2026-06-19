@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import axios from 'axios';
+import api from '../../api/docs';
 
 const useDocumentLoader = (documentId, initialDoc) => {
   const [docObj, setDocObj] = useState(initialDoc || null);
@@ -9,7 +9,7 @@ const useDocumentLoader = (documentId, initialDoc) => {
     if (!documentId || initialDoc) return;
     try {
       setIsLoading(true);
-      const response = await axios.get(`http://localhost:5000/api/docs/${documentId}`);
+      const response = await api.get(`/docs/${documentId}`);
       setDocObj(response.data);
     } catch (error) {
       console.error('Error loading document:', error);

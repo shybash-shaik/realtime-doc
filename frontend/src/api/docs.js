@@ -2,7 +2,9 @@
 import axios from "axios";
 
 const instance = axios.create({
-  baseURL: "http://localhost:5000/api", // Update if your backend uses a different path
+  baseURL: import.meta.env.VITE_BACKEND_URL
+    ? `${import.meta.env.VITE_BACKEND_URL}/api`
+    : "http://localhost:5000/api",
   withCredentials: true, // allow sending cookies (for JWT auth)
 });
 

@@ -1,18 +1,49 @@
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import React, { Suspense, lazy } from 'react';
 import { useState } from 'react';
+import { Toaster } from 'react-hot-toast';
+import GlobalErrorBoundary from './components/GlobalErrorBoundary';
 import Home from './components/Home';
 import Login from './components/Login';
 import Register from './components/Register';
 import DocumentList from './components/DocumentList';
 const Document = lazy(() => import('./components/Document'));
 import PrivateRoute from './components/PrivateRoute';
+import CommandPalette from './components/CommandPalette';
 
 function App() {
   return (
-    <Router>
-      <AppRoutes />
-    </Router>
+    <GlobalErrorBoundary>
+      <Router>
+        <CommandPalette />
+        <Toaster 
+          position="top-right"
+          toastOptions={{
+            duration: 3000,
+            style: {
+              background: '#fff',
+              color: '#334155',
+              boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
+              borderRadius: '0.75rem',
+              border: '1px solid #e2e8f0',
+            },
+            success: {
+              iconTheme: {
+                primary: '#10b981',
+                secondary: '#fff',
+              },
+            },
+            error: {
+              iconTheme: {
+                primary: '#ef4444',
+                secondary: '#fff',
+              },
+            },
+          }}
+        />
+        <AppRoutes />
+      </Router>
+    </GlobalErrorBoundary>
   );
 }
 

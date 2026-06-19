@@ -13,10 +13,16 @@ router.use(verifyJWT);
 router.get('/', async (req, res) => {
   try {
     const q = req.query.q ? req.query.q.toLowerCase() : null;
-    const folder = req.query.folder || null;
-    let query = db.collection('documents');
-    if (folder) {
-      query = query.where('folder', '==', folder);
+    const userId = req.user?.uid;
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
+    let query = db.collection('documents').where('allowedUsers', 'array-contains', userId);
+    if (!req.query.all) {
+      if (req.query.parentId) {
+        query = query.where('parentId', '==', sanitizeHtml(req.query.parentId));
+      } else {
+        query = query.where('parentId', '==', null); // Default to root level
+      }
     }
     const docsSnapshot = await query.get();
     let documents = [];
@@ -54,7 +60,9 @@ router.post('/', async (req, res) => {
   try {
     const title = sanitizeHtml(req.body.title);
     const content = sanitizeHtml(req.body.content || '');
-    const folder = req.body.folder ? sanitizeHtml(req.body.folder) : null;
+    const parentId = req.body.parentId ? sanitizeHtml(req.body.parentId) : null;
+    const coverImage = req.body.coverImage ? sanitizeHtml(req.body.coverImage) : null;
+    const icon = req.body.icon ? sanitizeHtml(req.body.icon) : null;
 
     const userId = req.user?.uid; // Use authenticated user's UID
     if (!title || !userId) {
@@ -63,20 +71,26 @@ router.post('/', async (req, res) => {
     const permissions = [
       { userId, role: 'admin' }
     ];
+    const allowedUsers = [userId];
     const docRef = await db.collection('documents').add({
       title,
       content,
-      folder,
+      parentId,
+      coverImage,
+      icon,
       userId,
       createdAt: new Date(),
       updatedAt: new Date(),
-      permissions
+      permissions,
+      allowedUsers
     });
     res.status(201).json({
       id: docRef.id,
       title,
       content,
-      folder,
+      parentId,
+      coverImage,
+      icon,
       userId,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -89,15 +103,17 @@ router.post('/', async (req, res) => {
 
 router.put('/:id', requireDocumentRole(['admin', 'editor']), async (req, res) => {
   try {
-    const { title, userId, content, folder } = req.body;
+    const { title, userId, content, parentId, coverImage, icon } = req.body;
     const docRef = db.collection('documents').doc(req.params.id);
     const updateData = {
       updatedAt: new Date()
     };
-    if (title) updateData.title = sanitizeHtml(title);
+    if (title !== undefined) updateData.title = sanitizeHtml(title);
     if (userId) updateData.userId = userId;
     if (content !== undefined) updateData.content = sanitizeHtml(content);
-    if (folder !== undefined) updateData.folder = sanitizeHtml(folder);
+    if (parentId !== undefined) updateData.parentId = parentId ? sanitizeHtml(parentId) : null;
+    if (coverImage !== undefined) updateData.coverImage = sanitizeHtml(coverImage);
+    if (icon !== undefined) updateData.icon = sanitizeHtml(icon);
 
     await docRef.update(updateData);
     const updatedDoc = await docRef.get();
@@ -117,7 +133,8 @@ router.put('/:id/permissions', requireDocumentRole(['admin']), async (req, res) 
       return res.status(400).json({ error: 'Permissions must be an array' });
     }
     const docRef = db.collection('documents').doc(req.params.id);
-    await docRef.update({ permissions, updatedAt: new Date() });
+    const allowedUsers = permissions.map(p => p.userId);
+    await docRef.update({ permissions, allowedUsers, updatedAt: new Date() });
     const updatedDoc = await docRef.get();
     res.json({
       id: updatedDoc.id,
@@ -138,59 +155,6 @@ router.delete('/:id', requireDocumentRole(['admin']), async (req, res) => {
   }
 });
 
-router.get('/folders/all', async (req, res) => {
-  try {
-    const foldersSnapshot = await db.collection('folders').get();
-    const folders = [];
-    foldersSnapshot.forEach(folder => {
-      folders.push({ id: folder.id, ...folder.data() });
-    });
-    res.json(folders);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-router.post('/folders', async (req, res) => {
-  try {
-    const name = sanitizeHtml(req.body.name);
-
-    const userId = req.user?.uid;
-    if (!name || !userId) {
-      return res.status(400).json({ error: 'Name and userId are required' });
-    }
-    const folderRef = await db.collection('folders').add({
-      name,
-      userId,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    });
-    res.status(201).json({ id: folderRef.id, name, userId });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-router.delete('/folders/:id', async (req, res) => {
-  try {
-    const userId = req.user?.uid;
-    const folderId = req.params.id;
-    const folderRef = db.collection('folders').doc(folderId);
-    const folderSnap = await folderRef.get();
-    if (!folderSnap.exists) {
-      return res.status(404).json({ error: 'Folder not found' });
-    }
-    if (folderSnap.data().userId !== userId) {
-      return res.status(403).json({ error: 'Forbidden' });
-    }
-    const docsSnapshot = await db.collection('documents').where('folder', '==', folderSnap.data().name).get();
-    const batch = db.batch();
-    docsSnapshot.forEach(doc => batch.delete(doc.ref));
-    batch.delete(folderRef);
-    await batch.commit();
-    res.json({ message: 'Folder and its documents deleted successfully' });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
 
 router.post('/:id/share', requireDocumentRole(['admin']), async (req, res) => {
   try {
